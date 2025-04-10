@@ -1,17 +1,28 @@
 import hashlib
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple
 
-def generate_block_hashes(token_sequence: List[int], block_size: int) -> List[int]:
+def deterministic_hash(data: Tuple) -> int:
     """
-    Generate block hashes for a sequence of tokens.
+    A deterministic hash function that will produce consistent results across different runs.
     
     Args:
-        token_sequence (List[int]): A list of tokens to process
-        block_size (int): The size of each block
+        data: A tuple containing the data to hash
         
     Returns:
-        List[int]: A list of block hashes for full blocks only
+        A 64-bit integer hash value
     """
+    # Convert all elements to strings and join with a delimiter
+    # that won't appear in the data to avoid collisions
+    str_data = "|".join(str(item) for item in data)
+    
+    # Use SHA-256 for a cryptographically secure hash
+    hash_obj = hashlib.sha256(str_data.encode('utf-8'))
+    
+    # Convert to a 64-bit integer (8 bytes)
+    # We use big-endian byte order for consistency
+    return int.from_bytes(hash_obj.digest()[:8], byteorder='big')
+
+def generate_block_hashes(token_sequence: List[int], block_size: int) -> List[int]:
     # Calculate how many full blocks we have
     num_full_blocks = len(token_sequence) // block_size
     
@@ -29,20 +40,18 @@ def generate_block_hashes(token_sequence: List[int], block_size: int) -> List[in
         # Determine if this is the first block
         is_first_block = (i == 0)
         
-        # Compute the hash for this block
-        input_str = str(is_first_block) + str(prev_block_hash)
-        for token_id in cur_block_tokens:
-            input_str = input_str + str(token_id)
+        # Handle None case for first block
+        if is_first_block and prev_block_hash is None:
+            prev_block_hash = 0  # Use a consistent value for None
         
-        _hash_str = hashlib.sha256(input_str.encode())
-        _hash = int.from_bytes(_hash_str.digest(), byteorder='big')
-        _hash_32bit = _hash & 0xFFFFFFFF  # Masking: keep only the lower 32 bits
+        # Create a tuple and hash it deterministically
+        block_hash = deterministic_hash((is_first_block, prev_block_hash, *cur_block_tokens, None))
         
         # Add the hash to our list
-        block_hashes.append(_hash_32bit)
+        block_hashes.append(block_hash)
         
         # Update prev_block_hash for the next iteration
-        prev_block_hash = _hash_32bit
+        prev_block_hash = block_hash
     
     return block_hashes
 
@@ -68,6 +77,7 @@ class BlockPool:
 
     def get_hits(self, seq: List[int]) -> int:
         hashes = generate_block_hashes(seq, self.block_size)
+        print(f"Tokens: {seq}, Hashes: {hashes}, blocks: {self.blocks}")
         for i in range(len(hashes)):
             if hashes[i] not in self.blocks:
                 return i

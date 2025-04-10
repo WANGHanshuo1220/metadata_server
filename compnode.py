@@ -3,9 +3,10 @@ from typing import List, Dict
 
 class CompNode:
 
-    def __init__(self, num_gpu_blocks: int, block_size: int):
+    def __init__(self, num_gpu_blocks: int, block_size: int, api_base: str):
         self.gpu_pool = BlockPool(num_blocks=num_gpu_blocks, block_size=block_size)
         self.block_size = block_size
+        self.api_base = api_base
         self.request_count = 0
 
     def sync_status(self, request_count: int, gpu_blocks: Dict[int, int]):
