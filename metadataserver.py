@@ -113,7 +113,7 @@ class MetadataServer:
                 tokenize_payload = {"messages": content}
             
             response = await client.post(
-                f"{first_address}/tokenize", 
+                f"http://{first_address}/tokenize", 
                 json=tokenize_payload
             )
             
@@ -131,7 +131,7 @@ class MetadataServer:
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST",
-                f"{address}{endpoint}",
+                f"http://{address}{endpoint}",
                 json=payload,
                 timeout=httpx.Timeout(timeout=None)  # No timeout for streaming
             ) as response:
@@ -150,7 +150,7 @@ class MetadataServer:
         
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{address}{endpoint}",
+                f"http://{address}{endpoint}",
                 json=payload
             )
             

@@ -232,11 +232,11 @@ async def completions(request: CompletionRequest, server: MetadataServer = Depen
         # Forward the request to the target compute node
         if request.stream:
             return StreamingResponse(
-                server.stream_response(target_address, "/completions", request.model_dump()),
+                server.stream_response(target_address, "/v1/completions", request.model_dump()),
                 media_type="text/event-stream"
             )
         else:
-            response, status_code = await server.non_streaming_request(target_address, "/completions", request.model_dump())
+            response, status_code = await server.non_streaming_request(target_address, "/v1/completions", request.model_dump())
             return JSONResponse(content=response, status_code=status_code)
             
     except Exception as e:
@@ -256,11 +256,11 @@ async def completions(request: CompletionRequest, server: MetadataServer = Depen
 #         # Forward the request to the target compute node
 #         if request.stream:
 #             return StreamingResponse(
-#                 server.stream_response(target_compnode_id, "/chat/completions", request.model_dump()),
+#                 server.stream_response(target_compnode_id, "/v1/chat/completions", request.model_dump()),
 #                 media_type="text/event-stream"
 #             )
 #         else:
-#             response, status_code = await server.non_streaming_request(target_compnode_id, "/chat/completions", request.model_dump())
+#             response, status_code = await server.non_streaming_request(target_compnode_id, "/v1/chat/completions", request.model_dump())
 #             return JSONResponse(content=response, status_code=status_code)
             
 #     except Exception as e:
