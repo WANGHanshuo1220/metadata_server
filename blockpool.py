@@ -60,25 +60,36 @@ class BlockPool:
     def __init__(self, num_blocks: int, block_size: int):
         self.num_blocks = num_blocks
         self.block_size = block_size
-        self.blocks = []
-        self.active_blocks = []
+        self.blocks = set()
 
-    def sync_status(self, blocks: Dict[int, int]) -> None:
-        assert len(self.blocks) <= len(blocks) <= self.num_blocks
-
-        self.blocks = list(blocks.keys())
-        self.active_blocks = [block_id for block_id, status in blocks.items() if status != 0]
-
-    def get_unused_blocks(self) -> int:
-        return self.num_blocks - len(self.blocks)
+    def sync_status(self, blocks: List[int]) -> None:
+        assert len(blocks) <= self.num_blocks
+        self.blocks = set(blocks)
 
     def get_free_blocks(self) -> int:
-        return self.num_blocks - len(self.active_blocks)
+        return self.num_blocks - len(self.blocks)
 
-    def get_hits(self, seq: List[int]) -> int:
-        hashes = generate_block_hashes(seq, self.block_size)
-        print(f"Tokens: {seq}, Hashes: {hashes}, blocks: {self.blocks}")
-        for i in range(len(hashes)):
-            if hashes[i] not in self.blocks:
+    def get_block_hits(self, blocks: List[int]) -> int:
+        for i in range(len(blocks)):
+            if blocks[i] not in self.blocks:
                 return i
-        return len(hashes)
+        return len(blocks)
+
+    def get_sequence_hits(self, seq: List[int]) -> int:
+        hashes = generate_block_hashes(seq, self.block_size)
+        return self.get_block_hits(hashes)
+        
+    def add_block(self, block: int) -> None:
+        self.blocks.add(block)
+        assert len(self.blocks) <= self.num_blocks
+        
+    def delete_block(self, block: int) -> None:
+        self.blocks.remove(block)
+        
+    def add_blocks(self, blocks: List[int]) -> None:
+        self.blocks.update(blocks)
+        assert len(self.blocks) <= self.num_blocks
+        
+    def delete_blocks(self, blocks: List[int]) -> None:
+        for block in blocks:
+            self.blocks.remove(block)
