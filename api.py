@@ -43,6 +43,9 @@ class BlockData(BaseModel):
 class BlocksData(BaseModel):
     blocks: List[int]
 
+class SequencesData(BaseModel):
+    sequences: List[List[int]]
+
 # OpenAI API compatible models
 class ChatMessage(BaseModel):
     role: str
@@ -189,6 +192,11 @@ def add_blocks_to_mempool(address: str, data: BlocksData, server: MetadataServer
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+@app.post("/save_cache_meta")
+def save_cache_meta(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
+    """Save cache metadata."""
+    return add_blocks_to_mempool(address, data, server)
+
 @app.delete("/mempool/blocks")
 def delete_blocks_from_mempool(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
     """Delete multiple blocks from a memory pool."""
@@ -213,6 +221,59 @@ def get_mempool_hits(address: str, data: BlocksData, server: MetadataServer = De
         return server.mempools[address].get_block_hits(data.blocks)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"Memory pool with address {address} not found")
+
+@app.get("/which_mn_to_save_cache")
+def which_mn_to_save_cache(server: MetadataServer = Depends(get_metadata_server)):
+    """Returns the address of the mempool with the most free blocks."""
+    if not server.mempools:
+        raise HTTPException(status_code=404, detail="No memory pools available")
+    
+    max_free_blocks = -1
+    target_address = None
+    
+    for address, mempool in server.mempools.items():
+        free_blocks = mempool.get_free_blocks()
+        if free_blocks > max_free_blocks:
+            max_free_blocks = free_blocks
+            target_address = address
+    
+    return {"msg": target_address}
+
+@app.post("/which_mn_to_fetch")
+def which_mn_to_fetch(data: SequencesData, server: MetadataServer = Depends(get_metadata_server)):
+    """For every sequence, find the mempool with the most hits, and return the address and the hit count."""
+    if not server.mempools:
+        raise HTTPException(status_code=404, detail="No memory pools available")
+    
+    results = []
+    
+    for sequence in data.sequences:
+        max_hits = -1
+        best_address = None
+        
+        for address, mempool in server.mempools.items():
+            hits = mempool.get_block_hits(sequence)
+            if hits > max_hits:
+                max_hits = hits
+                best_address = address
+        
+        results.append({"address": best_address, "hit_count": max_hits})
+    
+    return {"msg": results}
+
+@app.get("/get_engine_api_url")
+def get_engine_api_url(engine_type: str, server: MetadataServer = Depends(get_metadata_server)):
+    """Returns the first compnode address if engine_type=gpu, and returns the first mempool address if engine_type=cpu."""
+    if engine_type.lower() == "gpu":
+        if not server.compnodes:
+            raise HTTPException(status_code=404, detail="No compute nodes available")
+        return {"msg": next(iter(server.compnodes))}
+    elif engine_type.lower() == "cpu":
+        if not server.mempools:
+            raise HTTPException(status_code=404, detail="No memory pools available")
+        return {"msg": next(iter(server.mempools))}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid engine_type. Must be 'gpu' or 'cpu'")
 
 # vLLM API interaction endpoints
 @app.post("/completions")
