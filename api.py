@@ -1,88 +1,14 @@
-from fastapi import FastAPI, HTTPException, Depends, Request
-from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Union, Any, Literal, AsyncGenerator
 import uvicorn
-import json
-import traceback
+from fastapi import FastAPI, HTTPException, Depends
 
-from metadataserver import MetadataServer
+from common.utils import *
+from metadata_server.metadata_server import MetadataServer
 
 # Create FastAPI app
 app = FastAPI(title="Metadata Server API", description="API for managing compute nodes and memory pools")
 
 # Create a global instance of MetadataServer
 metadata_server = MetadataServer()
-
-# Pydantic models for request/response validation
-class CompNodeCreate(BaseModel):
-    address: str
-    num_gpu_blocks: int
-
-class MemPoolCreate(BaseModel):
-    address: str
-    num_blocks: int
-
-class CompNodeSync(BaseModel):
-    request_count: int
-    gpu_blocks: List[int]
-
-class MemPoolSync(BaseModel):
-    blocks: List[int]
-
-class ServerStats(BaseModel):
-    compnode_count: int
-    mempool_count: int
-
-class TokenSequence(BaseModel):
-    sequence: List[int]
-
-class BlockData(BaseModel):
-    block: int
-
-class BlocksData(BaseModel):
-    blocks: List[int]
-
-class SequencesData(BaseModel):
-    sequences: List[List[int]]
-
-# OpenAI API compatible models
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-class ChatCompletionRequest(BaseModel):
-    model: Optional[str] = None
-    messages: List[ChatMessage]
-    temperature: Optional[float] = 1.0
-    top_p: Optional[float] = 1.0
-    n: Optional[int] = 1
-    max_tokens: Optional[int] = None
-    stop: Optional[Union[str, List[str]]] = None
-    stream: Optional[bool] = True
-    presence_penalty: Optional[float] = 0.0
-    frequency_penalty: Optional[float] = 0.0
-    user: Optional[str] = None
-
-class CompletionRequest(BaseModel):
-    model: Optional[str] = None
-    prompt: Union[str, List[str]]
-    temperature: Optional[float] = 1.0
-    top_p: Optional[float] = 1.0
-    n: Optional[int] = 1
-    max_tokens: Optional[int] = 16
-    stop: Optional[Union[str, List[str]]] = None
-    stream: Optional[bool] = True
-    presence_penalty: Optional[float] = 0.0
-    frequency_penalty: Optional[float] = 0.0
-    user: Optional[str] = None
-
-class TokenizeRequest(BaseModel):
-    model: Optional[str] = None
-    prompt: Optional[str] = None
-    messages: Optional[List[ChatMessage]] = None
-    add_special_tokens: Optional[bool] = True
-    add_generation_prompt: Optional[bool] = True
 
 # Dependency to get the metadata server instance
 def get_metadata_server():
@@ -93,240 +19,81 @@ def get_metadata_server():
 def get_server_stats(server: MetadataServer = Depends(get_metadata_server)):
     """Get the current server statistics."""
     return {
-        "compnode_count": server.get_compnode_count(),
-        "mempool_count": server.get_mempool_count()
+        "compnode_count": server.total_cn_count,
+        "mempool_count": server.mn_count
     }
 
-@app.post("/compnode")
-def add_compnode(node: CompNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
+
+##############################################################
+#                      Add Nodes APIs                        #
+##############################################################
+@app.post("/compnode/add_node")
+def add_compnode(cn_info: CompNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new compute node to the server."""
-    server.add_compnode(node.address, node.num_gpu_blocks)
-    print("Total compnodes: ", server.get_compnode_count())
+    server.add_cn(cn_info)
+    print("Total compnodes: ", server.total_cn_count)
     return {"status": "success"}
 
-@app.post("/mempool")
-def add_mempool(pool: MemPoolCreate, server: MetadataServer = Depends(get_metadata_server)):
+@app.post("/mempool/add_node")
+def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new memory pool to the server."""
-    server.add_mempool(pool.address, pool.num_blocks)
-    print("Total mempools: ", server.get_mempool_count())
+    server.add_mn(mn_info)
+    print("Total memnodes: ", server.mn_count)
     return {"status": "success"}
 
+
+##############################################################
+#                      Get Nodes APIs                        #
+##############################################################
+@app.get("/mempool/get_api")
+def get_memnode(request: GetMemNode, server: MetadataServer = Depends(get_metadata_server)):
+    """Schudule a mem node."""
+    mn_addr = server.get_mn(request)
+    return {"data": mn_addr}
+
+@app.get("/get_disagg_pair_api")
+def get_disagg_pair(request: GetDisaggNodePair, server: MetadataServer = Depends(get_metadata_server)):
+    """Schudule a mem node."""
+    disagg_pair_info = server.get_disagg_pair_api(request)
+    return {"data": disagg_pair_info}
+
+
+##############################################################
+#                     Update Stats APIs                      #
+##############################################################
 @app.put("/compnode/sync")
-def sync_compnode(address: str, data: CompNodeSync, server: MetadataServer = Depends(get_metadata_server)):
+def sync_compnode(data: CompNodeSync, server: MetadataServer = Depends(get_metadata_server)):
     """Sync the status of a compute node."""
     try:
-        server.sync_compnode(address, data.request_count, data.gpu_blocks)
+        server.sync_compnode(data)
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 @app.put("/mempool/sync")
-def sync_mempool(address: str, data: MemPoolSync, server: MetadataServer = Depends(get_metadata_server)):
+def sync_memnode(data: MemNodeSync, server: MetadataServer = Depends(get_metadata_server)):
     """Sync the status of a memory pool."""
     try:
-        server.sync_mempool(address, data.blocks)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.post("/compnode/block")
-def add_block_to_compnode(address: str, data: BlockData, server: MetadataServer = Depends(get_metadata_server)):
-    """Add a single block to a compute node."""
-    try:
-        server.add_block_to_compnode(address, data.block)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.delete("/compnode/block")
-def delete_block_from_compnode(address: str, data: BlockData, server: MetadataServer = Depends(get_metadata_server)):
-    """Delete a single block from a compute node."""
-    try:
-        server.delete_block_from_compnode(address, data.block)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.post("/compnode/blocks")
-def add_blocks_to_compnode(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
-    """Add multiple blocks to a compute node."""
-    try:
-        server.add_blocks_to_compnode(address, data.blocks)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.delete("/compnode/blocks")
-def delete_blocks_from_compnode(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
-    """Delete multiple blocks from a compute node."""
-    try:
-        server.delete_blocks_from_compnode(address, data.blocks)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.post("/mempool/block")
-def add_block_to_mempool(address: str, data: BlockData, server: MetadataServer = Depends(get_metadata_server)):
-    """Add a single block to a memory pool."""
-    try:
-        server.add_block_to_mempool(address, data.block)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.delete("/mempool/block")
-def delete_block_from_mempool(address: str, data: BlockData, server: MetadataServer = Depends(get_metadata_server)):
-    """Delete a single block from a memory pool."""
-    try:
-        server.delete_block_from_mempool(address, data.block)
+        server.sync_memnode(data)
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
 @app.post("/mempool/blocks")
-def add_blocks_to_mempool(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
+def add_blocks_to_mempool(data: MemNodeSync, server: MetadataServer = Depends(get_metadata_server)):
     """Add multiple blocks to a memory pool."""
     try:
-        server.add_blocks_to_mempool(address, data.blocks)
+        server.add_blocks_to_mempool(data)
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-
-@app.post("/save_cache_meta")
-def save_cache_meta(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
-    """Save cache metadata."""
-    return add_blocks_to_mempool(address, data, server)
-
-@app.delete("/mempool/blocks")
-def delete_blocks_from_mempool(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
-    """Delete multiple blocks from a memory pool."""
-    try:
-        server.delete_blocks_from_mempool(address, data.blocks)
-        return {"status": "success"}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-@app.get("/mempool/free_blocks")
-def get_mempool_free_blocks(address: str, server: MetadataServer = Depends(get_metadata_server)):
-    """Get the number of free blocks in a memory pool."""
-    try:
-        return server.mempools[address].get_free_blocks()
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"Memory pool with address {address} not found")
 
 @app.post("/mempool/hits")
-def get_mempool_hits(address: str, data: BlocksData, server: MetadataServer = Depends(get_metadata_server)):
+def get_mempool_hits(server: MetadataServer = Depends(get_metadata_server)):
     """Get the number of hits for a list of blocks in a memory pool."""
-    try:
-        return server.mempools[address].get_block_hits(data.blocks)
-    except KeyError:
-        raise HTTPException(status_code=404, detail=f"Memory pool with address {address} not found")
+    hit_rate = server.get_mempool_hit_rate()
+    return {"ret": hit_rate}
 
-@app.get("/which_mn_to_save_cache")
-def which_mn_to_save_cache(server: MetadataServer = Depends(get_metadata_server)):
-    """Returns the address of the mempool with the most free blocks."""
-    if not server.mempools:
-        raise HTTPException(status_code=404, detail="No memory pools available")
-    
-    max_free_blocks = -1
-    target_address = None
-    
-    for address, mempool in server.mempools.items():
-        free_blocks = mempool.get_free_blocks()
-        if free_blocks > max_free_blocks:
-            max_free_blocks = free_blocks
-            target_address = address
-    
-    return {"msg": target_address}
-
-@app.post("/which_mn_to_fetch")
-def which_mn_to_fetch(data: SequencesData, server: MetadataServer = Depends(get_metadata_server)):
-    """For every sequence, find the mempool with the most hits, and return the address and the hit count."""
-    if not server.mempools:
-        raise HTTPException(status_code=404, detail="No memory pools available")
-    
-    results = []
-    
-    for sequence in data.sequences:
-        max_hits = -1
-        best_address = None
-        
-        for address, mempool in server.mempools.items():
-            hits = mempool.get_block_hits(sequence)
-            if hits > max_hits:
-                max_hits = hits
-                best_address = address
-        
-        results.append({"address": best_address, "hit_count": max_hits})
-    
-    return {"msg": results}
-
-@app.get("/get_engine_api_url")
-def get_engine_api_url(engine_type: str, server: MetadataServer = Depends(get_metadata_server)):
-    """Returns the first compnode address if engine_type=gpu, and returns the first mempool address if engine_type=cpu."""
-    if engine_type.lower() == "gpu":
-        if not server.compnodes:
-            raise HTTPException(status_code=404, detail="No compute nodes available")
-        return {"msg": next(iter(server.compnodes))}
-    elif engine_type.lower() == "cpu":
-        if not server.mempools:
-            raise HTTPException(status_code=404, detail="No memory pools available")
-        return {"msg": next(iter(server.mempools))}
-    else:
-        raise HTTPException(status_code=400, detail="Invalid engine_type. Must be 'gpu' or 'cpu'")
-
-# vLLM API interaction endpoints
-@app.post("/completions")
-async def completions(request: CompletionRequest, server: MetadataServer = Depends(get_metadata_server)):
-    """Process completions request, tokenize input, and forward to vLLM API."""
-    try:
-        # Tokenize the prompt
-        if isinstance(request.prompt, str):
-            tokens = await server.tokenize(request.prompt)
-        else:
-            # Handle list of prompts - just use the first one for now
-            tokens = await server.tokenize(request.prompt[0])
-            
-        # Find the best compute node for this request
-        target_address = server.get_target_compnode(tokens)
-        
-        # Forward the request to the target compute node
-        if request.stream:
-            return StreamingResponse(
-                server.stream_response(target_address, "/v1/completions", request.model_dump()),
-                media_type="text/event-stream"
-            )
-        else:
-            response, status_code = await server.non_streaming_request(target_address, "/v1/completions", request.model_dump())
-            return JSONResponse(content=response, status_code=status_code)
-            
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-# @app.post("/chat/completions")
-# async def chat_completions(request: ChatCompletionRequest, server: MetadataServer = Depends(get_metadata_server)):
-#     """Process chat completions request, tokenize input, and forward to vLLM API."""
-#     try:
-#         # Tokenize the messages
-#         tokens = await server.tokenize(request.messages)
-            
-#         # Find the best compute node for this request
-#         target_compnode_id = server.get_target_compnode(tokens)
-        
-#         # Forward the request to the target compute node
-#         if request.stream:
-#             return StreamingResponse(
-#                 server.stream_response(target_compnode_id, "/v1/chat/completions", request.model_dump()),
-#                 media_type="text/event-stream"
-#             )
-#         else:
-#             response, status_code = await server.non_streaming_request(target_compnode_id, "/v1/chat/completions", request.model_dump())
-#             return JSONResponse(content=response, status_code=status_code)
-            
-#     except Exception as e:
-#         traceback.print_exc()
-#         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=6666)
