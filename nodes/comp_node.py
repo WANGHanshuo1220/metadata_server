@@ -2,19 +2,19 @@ from dataclasses import dataclass
 from typing import List
 
 from common.block_pool import BlockPool
-from common.utils import CN_API_URL, CompNodeCreate, CompNodeSync
+from common.utils import HostIP, PORT, CompNodeCreate, CompNodeSync
 
 
 @dataclass
 class CNBaseInfo:
-    api_url: CN_API_URL
-    engine_type: str
-    pd_role: str
+    host: HostIP
+    port: PORT
+    role: str
 
     @staticmethod
     def create(cn_info: CompNodeCreate) -> 'CNBaseInfo':
         return CNBaseInfo(
-            cn_info.api_url, cn_info.engine_type, cn_info.pd_role)
+            cn_info.host, cn_info.port, cn_info.role)
 
 
 class CompNode:
@@ -23,7 +23,7 @@ class CompNode:
         self.gpu_pool = BlockPool(num_blocks=cn_info.num_gpu_blocks, 
                                   block_size=block_size)
         self.block_size = block_size
-        self.bash_info = CNBaseInfo.create(cn_info)
+        self.base_info = CNBaseInfo.create(cn_info)
         
         self.request_count = 0
 
@@ -39,18 +39,3 @@ class CompNode:
 
     def get_free_blocks(self) -> int:
         return self.gpu_pool.get_free_blocks()
-
-    def get_sequence_hits(self, seq: List[int]) -> int:
-        return self.gpu_pool.get_sequence_hits(seq)
-
-    def add_block(self, block: int) -> None:
-        self.gpu_pool.add_block(block)
-        
-    def delete_block(self, block: int) -> None:
-        self.gpu_pool.delete_block(block)
-        
-    def add_blocks(self, blocks: List[int]) -> None:
-        self.gpu_pool.add_blocks(blocks)
-        
-    def delete_blocks(self, blocks: List[int]) -> None:
-        self.gpu_pool.delete_blocks(blocks)

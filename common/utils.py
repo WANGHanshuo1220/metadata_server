@@ -4,7 +4,6 @@ from pydantic import BaseModel
 
 HostIP = int
 PORT = int
-NODE_TYPE = str
 
 
 # Pydantic models for request/response validation
@@ -13,36 +12,47 @@ NODE_TYPE = str
 class CompNodeCreate(BaseModel):
     host: HostIP
     port: PORT
-    engine_type: str
     role: str
     num_gpu_blocks: int
 
 class MemNodeCreate(BaseModel):
     host: HostIP
+    node_type: str
     num_blocks: int
 
 # Node get
 class GetCompNode(BaseModel):
-    seq_length: int
+    block_hashes: List[int]
 
 class GetMemNode(BaseModel):
-    seq_length: int
+    block_hashes: List[int]
 
 class GetDisaggNodePair(BaseModel):
     seq_length: int
 
 # Node sync
 class CompNodeSync(BaseModel):
-    api_url: CN_API_URL
+    host: HostIP
+    port: PORT
     role: str
     request_count: int
     gpu_blocks: List[int]
 
 class MemNodeSync(BaseModel):
-    address: HostIP
+    host: HostIP
+    port: PORT
     block_hashes: List[int]
 
-# metadata server stats
-class ServerStats(BaseModel):
-    compnode_count: int
-    mempool_count: int
+
+class Counter:
+
+    def __init__(self, start: int = 0) -> None:
+        self.counter = start
+
+    def __next__(self) -> int:
+        i = self.counter
+        self.counter += 1
+        return i
+
+    def reset(self) -> None:
+        self.counter = 0

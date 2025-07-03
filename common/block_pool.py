@@ -1,7 +1,7 @@
 import hashlib
 from typing import List, Tuple
 
-from utils import MemNodeCreate, MemNodeSync
+from common.utils import MemNodeCreate, MemNodeSync
 
 
 class BlockPool:
@@ -29,15 +29,3 @@ class BlockPool:
     def add_block_hashes(self, block_hashes: List[int]) -> None:
         self.block_hashes.update(block_hashes)
         assert len(self.block_hashes) <= self.num_blocks
-
-
-    def get_block_hits(self, blocks: List[int]) -> int:
-        for i in range(len(blocks)):
-            if blocks[i] not in self.blocks:
-                return i
-        return len(blocks)
-
-    def get_sequence_hits(self, seq: List[int]) -> int:
-        hashes = generate_block_hashes(seq, self.block_size)
-        return self.get_block_hits(hashes)
-        

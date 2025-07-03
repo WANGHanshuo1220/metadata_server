@@ -1,23 +1,23 @@
 from typing import Optional
 
-from scheduler.cn_scheduler.cn_base_scheduler import CNBaseScheduler
-from common.utils import HostIP
+from scheduler.mn_scheduler.mn_base_scheduler import MNBaseScheduler
+from common.utils import HostIP, GetMemNode
 
 
-class CNNaiveScheduler(CNBaseScheduler):
+class MNNaiveScheduler(MNBaseScheduler):
     """ Naive scheduler use round robin method """
     
-    def __init__(self, comp_nodes, mem_nodes):
-        super().__init__(comp_nodes, mem_nodes)
+    def __init__(self, prefill_nodes, decode_nodes):
+        super().__init__(prefill_nodes, decode_nodes)
 
-    def schedule_mn(self) -> Optional[HostIP]:
-        target_addr = None
+    def get_mn_for_prefix_sharing(self, request: GetMemNode) -> Optional[HostIP]:
+        target_host = None
         max_hits = 0
 
-        for mn_addr, mn in self.mem_nodes.items():
-            hits = mn.check_hits()
+        for host, mn2cns in self.prefill_nodes.items():
+            hits = mn2cns.mem_node.check_hits(request.block_hashes)
             if hits > max_hits:
                 max_hits = hits
-                target_addr = mn_addr
+                target_host = host
         
-        return target_addr
+        return target_host

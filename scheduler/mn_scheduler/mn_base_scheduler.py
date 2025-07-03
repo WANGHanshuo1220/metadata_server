@@ -1,21 +1,20 @@
-from typing import Dict
+from typing import Dict, Optional
 from abc import ABC, abstractmethod
 
-from comp_node import CompNode
-from mem_node import MemNode
-from common.utils import CN_API_URL, HostIP
+from nodes.utils import MN2CNs
+from common.utils import HostIP, GetMemNode
 
 
 class MNBaseScheduler(ABC):
     
     def __init__(
         self, 
-        comp_nodes: Dict[CN_API_URL, CompNode],
-        mem_nodes: Dict[HostIP, MemNode]
+        prefill_nodes: Dict[HostIP, MN2CNs],
+        decode_nodes: Dict[HostIP, MN2CNs],
     ) -> None:
-        self.comp_nodes = comp_nodes
-        self.mem_nodes = mem_nodes
+        self.prefill_nodes = prefill_nodes
+        self.decode_nodes = decode_nodes
 
     @abstractmethod
-    def schedule_mn(self) -> HostIP:
+    def get_mn_for_prefix_sharing(self, request: GetMemNode) -> Optional[HostIP]:
         raise NotImplementedError

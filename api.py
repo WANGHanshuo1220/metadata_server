@@ -31,31 +31,31 @@ def get_server_stats(server: MetadataServer = Depends(get_metadata_server)):
 def add_compnode(cn_info: CompNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new compute node to the server."""
     server.add_cn(cn_info)
-    print("Total compnodes: ", server.total_cn_count)
+    # print("Total compnodes: ", server.total_cn_count)
     return {"status": "success"}
 
 @app.post("/mempool/add_node")
 def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new memory pool to the server."""
     server.add_mn(mn_info)
-    print("Total memnodes: ", server.mn_count)
+    # print("Total memnodes: ", server.mn_count)
     return {"status": "success"}
 
 
 ##############################################################
 #                      Get Nodes APIs                        #
 ##############################################################
-@app.get("/mempool/get_api")
-def get_memnode(request: GetMemNode, server: MetadataServer = Depends(get_metadata_server)):
-    """Schudule a mem node."""
-    mn_addr = server.get_mn(request)
-    return {"data": mn_addr}
+@app.get("/mempool/prefix_sharing")
+def prefix_sharing(request: GetMemNode, server: MetadataServer = Depends(get_metadata_server)):
+    """Choose a mem node for prefix sharing. CN may use pcie or rdma to fetch."""
+    ret = server.get_mn_for_prefix_sharing(request)
+    return {"data": ret}
 
-@app.get("/get_disagg_pair_api")
-def get_disagg_pair(request: GetDisaggNodePair, server: MetadataServer = Depends(get_metadata_server)):
-    """Schudule a mem node."""
-    disagg_pair_info = server.get_disagg_pair_api(request)
-    return {"data": disagg_pair_info}
+@app.get("/compnode/schedule_prefill")
+def schedule_prefill(request: GetCompNode, server: MetadataServer = Depends(get_metadata_server)):
+    """Schudule a comp node for prefilling stage."""
+    ret = server.schedule_prefill(request)
+    return {"data": ret}
 
 
 ##############################################################

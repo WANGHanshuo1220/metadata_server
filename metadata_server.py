@@ -1,38 +1,32 @@
-from typing import Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, Optional, Tuple, List
 
-from comp_node import CompNode
-from mem_node import MemNode
-from common.utils import (HostIP, NODE_TYPE,
+from nodes.comp_node import CompNode
+from nodes.mem_node import MemNode
+from nodes.utils import MN2CNs, CPUCNs
+from common.utils import (HostIP, PORT,
+                          GetCompNode, GetMemNode,
                           CompNodeCreate, MemNodeCreate,
                           MemNodeSync, CompNodeSync)
 from scheduler.cn_scheduler.factory import CNSchedulerFactory
 from scheduler.mn_scheduler.factory import MNSchedulerFactory
 
 
-class MN2CNs:
-    """ A mapping between MN and CN with same host ip """
-    
-
-
 class MetadataServer:
 
     def __init__(self, block_size: int = 16) -> None:
         self.block_size = block_size
-        self.comp_nodes: Dict[NODE_TYPE, Dict[HostIP, CompNode]] = {}
-        self.mem_nodes: Dict[HostIP, MemNode] = {}
+
+        # This node means physical node that contains memory nodes and GPU engines
+        self.prefill_nodes: Dict[HostIP, MN2CNs] = {}
+        self.decode_nodes: Dict[HostIP, MN2CNs] = {}
+        self.cpu_nodes = CPUCNs()
 
         self.cn_scheduler = CNSchedulerFactory.create_scheduler(
-            "Naive", self.comp_nodes, self.mem_nodes)
+            "Naive", self.prefill_nodes, self.decode_nodes, self.cpu_nodes)
 
         self.mn_scheduler = MNSchedulerFactory.create_scheduler(
-            "Naive", self.comp_nodes, self.mem_nodes)
-
-        self.__post_init__()
-    
-    def __post_init__(self) -> None:
-        self.comp_nodes["prefill"] = {}
-        self.comp_nodes["decode"] = {}
-        self.comp_nodes["cpu"] = {}
+            "Naive", self.prefill_nodes, self.decode_nodes)
 
 
     ##############################################################
@@ -40,42 +34,63 @@ class MetadataServer:
     ##############################################################
     def add_cn(self, cn_info: CompNodeCreate) -> None:
         compnode = CompNode(cn_info, self.block_size)
-        self.comp_nodes[cn_info.role][cn_info.api_url] = compnode
+
+        if cn_info.role == "prefill":
+            host = cn_info.host
+            assert host in self.prefill_nodes
+            self.prefill_nodes[host].comp_nodes[cn_info.port] = compnode
+
+        elif cn_info.role == "decode":
+            host = cn_info.host
+            assert host in self.decode_nodes
+            self.decode_nodes[host].comp_nodes[cn_info.port] = compnode
+
+        else:
+            assert cn_info.role == "cpu"
+            self.cpu_nodes.append(cn_info.host, cn_info.port, compnode)
 
     def add_mn(self, mn_info: MemNodeCreate) -> None:
         mem_node = MemNode(mn_info, self.block_size)
-        self.mem_nodes[mn_info.host] = mem_node
+        if mn_info.node_type == "prefill":
+            assert mn_info.host not in self.prefill_nodes
+            self.prefill_nodes[mn_info.host] = MN2CNs(
+                host_ip=mn_info.host, mem_node=mem_node, comp_nodes={})
+        else:
+            assert mn_info.node_type == "decode"
+            assert mn_info.host not in self.decode_nodes
+            self.decode_nodes[mn_info.host] = MN2CNs(
+                host_ip=mn_info.host, mem_node=mem_node, comp_nodes={})
 
 
     ##############################################################
     #                      Get Nodes APIs                        #
     ##############################################################
-    @property
-    def prefill_cn_count(self) -> int:
-        return len(self.comp_nodes["prefill"])
+    # @property
+    # def prefill_cn_count(self) -> int:
+    #     return len(self.comp_nodes["prefill"])
 
-    @property
-    def decode_cn_count(self) -> int:
-        return len(self.comp_nodes["decode"])
+    # @property
+    # def decode_cn_count(self) -> int:
+    #     return len(self.comp_nodes["decode"])
 
-    @property
-    def cpu_cn_count(self) -> int:
-        return len(self.comp_nodes["cpu"])
+    # @property
+    # def cpu_cn_count(self) -> int:
+    #     return len(self.comp_nodes["cpu"])
     
-    @property
-    def total_cn_count(self) -> Tuple[int, int, int]:
-        return (self.prefill_cn_count(), self.decode_cn_count(),
-                self.cpu_cn_count())
+    # @property
+    # def total_cn_count(self) -> Tuple[int, int, int]:
+    #     return (self.prefill_cn_count(), self.decode_cn_count(),
+    #             self.cpu_cn_count())
 
     @property
     def mn_count(self) -> int:
-        return len(self.mem_nodes)
+        return len(self.prefill_nodes) + len(self.decode_nodes)
 
-    def get_mn(self) -> Optional[HostIP]:
-        return self.mn_scheduler.schedule_mn()
+    def get_mn_for_prefix_sharing(self, request: GetMemNode) -> Optional[HostIP]:
+        return self.mn_scheduler.get_mn_for_prefix_sharing(request)
 
-    def get_disagg_pair_api(self) -> Tuple[HostIP, HostIP, bool]:
-        return self.cn_scheduler.schedule_disagg_pair()
+    def schedule_prefill(self, request: GetCompNode) -> Tuple[HostIP, PORT]:
+        return self.cn_scheduler.schedule_prefill(request)
 
 
     ##############################################################

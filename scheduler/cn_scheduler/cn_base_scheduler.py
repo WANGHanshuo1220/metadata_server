@@ -1,33 +1,30 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 from abc import ABC, abstractmethod
 
-from comp_node import CompNode
-from mem_node import MemNode
-from common.utils import CN_API_URL, HostIP
+from nodes.utils import MN2CNs, CPUCNs
+from common.utils import PORT, HostIP
 
 
 class CNBaseScheduler(ABC):
     
     def __init__(
         self, 
-        comp_nodes: Dict[CN_API_URL, CompNode],
-        mem_nodes: Dict[HostIP, MemNode]
+        prefill_nodes: Dict[HostIP, MN2CNs],
+        decode_nodes: Dict[HostIP, MN2CNs],
+        cpu_nodes: List[CPUCNs]
     ) -> None:
-        self.comp_nodes = comp_nodes
-        self.mem_nodes = mem_nodes
+        self.prefill_nodes = prefill_nodes
+        self.decode_nodes = decode_nodes
+        self.cpu_nodes = cpu_nodes
 
     @abstractmethod
-    def schedule_prefill(self) -> CN_API_URL:
+    def schedule_prefill(self) -> Tuple[HostIP, PORT]:
         raise NotImplementedError
 
     @abstractmethod
-    def schedule_decode(self) -> CN_API_URL:
+    def schedule_decode(self) -> Tuple[HostIP, PORT]:
         raise NotImplementedError
 
     @abstractmethod
-    def schedule_cpu(self) -> CN_API_URL:
-        raise NotImplementedError
-
-    @abstractmethod
-    def schedule_disagg_pair(self) -> Tuple[CN_API_URL, CN_API_URL, bool]:
+    def schedule_cpu(self) -> Tuple[HostIP, PORT]:
         raise NotImplementedError

@@ -20,12 +20,12 @@ class CNSchedulerFactory:
         cls._registry[name] = loader
 
     @classmethod
-    def create_scheduler(cls, scheduler_name: str, cn, mn) -> CNBaseScheduler:
+    def create_scheduler(cls, scheduler_name: str, prefills, decodes, cpus) -> CNBaseScheduler:
         if scheduler_name not in cls._registry:
             raise ValueError(f"Unsupported connector type: {scheduler_name}")
 
         scheduler_cls = cls._registry[scheduler_name]()
-        return scheduler_cls(cn, mn)
+        return scheduler_cls(prefills, decodes, cpus)
 
 
 # Register various connectors here.
