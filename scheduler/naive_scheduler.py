@@ -68,7 +68,7 @@ class NaiveScheduler(BaseScheduler):
         direct_hybrid_decode = self._make_direct_hybrid(request)
         return (cn_host_ip, mn_host_ip, cn_port, direct_hybrid_decode)
 
-    def schedule_decode(self, request: GetCompNode) -> Tuple[HostIP, HostIP, PORT]:
+    def schedule_decode(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP], PORT]:
         """ Schedule a docode llm """
         if request.direct_hybrid:
             return self._schedule_hybrid_decode(request)
@@ -89,7 +89,7 @@ class NaiveScheduler(BaseScheduler):
 
         return (cn_host_ip, mn_host_ip, cn_port)
 
-    def _schedule_hybrid_decode(self, request: GetCompNode) -> Tuple[HostIP, HostIP, PORT]:
+    def _schedule_hybrid_decode(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP], PORT]:
         """ Use round robin method to choose a cn and save cache on local GPU host memory 
         NOTE: Let prefill llm save cache locally may lead to low aggregated network bandwidth
         and CPU computation

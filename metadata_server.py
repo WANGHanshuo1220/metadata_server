@@ -118,33 +118,33 @@ class MetadataServer:
 
             raise ValueError(f"Compute node {role} with {host}:{port} not found")
 
-    def sync_memnode(self, data: MemNodeSync):
+    def sync_memnode(self, data: MemNodeSync) -> int:
         host = data.host
         node_type = data.node_type
 
         if node_type == "prefill":
             if host not in self.prefill_nodes.keys():
                 raise ValueError(f"Memory node {node_type} with {host} not found")
-            self.prefill_nodes[host].mem_node.sync_status(data)
+            return self.prefill_nodes[host].mem_node.sync_status(data)
         else:
             assert node_type == "decode"
             if host not in self.decode_nodes.keys():
                 raise ValueError(f"Memory node {node_type} with {host} not found")
-            self.decode_nodes[host].mem_node.sync_status(data)
+            return self.decode_nodes[host].mem_node.sync_status(data)
 
-    def add_blocks_to_mempool(self, data: MemNodeSync):
+    def add_blocks_to_mempool(self, data: MemNodeSync) -> int:
         host = data.host
         node_type = data.node_type
 
         if node_type == "prefill":
             if host not in self.prefill_nodes.keys():
                 raise ValueError(f"Memory node {node_type} with {host} not found")
-            self.prefill_nodes[host].mem_node.add_block_hashes(data)
+            return self.prefill_nodes[host].mem_node.add_block_hashes(data)
         else:
             assert node_type == "decode"
             if host not in self.decode_nodes.keys():
                 raise ValueError(f"Memory node {node_type} with {host} not found")
-            self.decode_nodes[host].mem_node.add_block_hashes(data)
+            return self.decode_nodes[host].mem_node.add_block_hashes(data)
         
 
     ##############################################################

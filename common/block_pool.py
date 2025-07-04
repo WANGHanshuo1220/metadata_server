@@ -19,12 +19,14 @@ class BlockPool:
         assert len(block_hashes) <= self.num_blocks
         self.block_hashes = set(block_hashes)
 
-    def sync_status(self, data: MemNodeSync) -> None:
+    def sync_status(self, data: MemNodeSync) -> int:
         self._sync_block_hashes(data.block_hashes)
+        return len(self.block_hashes)
 
     def get_free_blocks(self) -> int:
         return self.num_blocks - len(self.block_hashes)
 
-    def add_block_hashes(self, data: MemNodeSync) -> None:
+    def add_block_hashes(self, data: MemNodeSync) -> int:
         self.block_hashes.update(data.block_hashes)
         assert len(self.block_hashes) <= self.num_blocks
+        return len(self.block_hashes)

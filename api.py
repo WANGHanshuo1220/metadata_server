@@ -14,16 +14,6 @@ metadata_server = MetadataServer()
 def get_metadata_server():
     return metadata_server
 
-# Endpoints
-@app.get("/", response_model=ServerStats)
-def get_server_stats(server: MetadataServer = Depends(get_metadata_server)):
-    """Get the current server statistics."""
-    return {
-        "compnode_count": server.total_cn_count,
-        "mempool_count": server.mn_count
-    }
-
-
 ##############################################################
 #                      Add Nodes APIs                        #
 ##############################################################
@@ -31,15 +21,13 @@ def get_server_stats(server: MetadataServer = Depends(get_metadata_server)):
 def add_compnode(cn_info: CompNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new compute node to the server."""
     server.add_cn(cn_info)
-    # print("Total compnodes: ", server.total_cn_count)
-    return {"status": "success"}
+    return {"status": f"Add cn success ({server.total_cn_count} CNs now)"}
 
 @app.post("/mempool/add_node")
 def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new memory pool to the server."""
     server.add_mn(mn_info)
-    # print("Total memnodes: ", server.mn_count)
-    return {"status": "success"}
+    return {"status": f"Add mn success ({server.mn_count} MNs now)"}
 
 
 ##############################################################
@@ -74,19 +62,21 @@ def sync_compnode(data: CompNodeSync, server: MetadataServer = Depends(get_metad
 def sync_memnode(data: MemNodeSync, server: MetadataServer = Depends(get_metadata_server)):
     """Sync the status of a memory pool."""
     try:
-        server.sync_memnode(data)
-        return {"status": "success"}
+        num_cached_blocks = server.sync_memnode(data)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    return {"status": f"Sync mn {data.host} success ({num_cached_blocks} cached blocks now)"}
 
 @app.post("/mempool/blocks")
 def add_blocks_to_mempool(data: MemNodeSync, server: MetadataServer = Depends(get_metadata_server)):
     """Add multiple blocks to a memory pool."""
     try:
-        server.add_blocks_to_mempool(data)
-        return {"status": "success"}
+        num_cached_blocks = server.add_blocks_to_mempool(data)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+    return {"status": f"Sync mn {data.host} success ({num_cached_blocks} cached blocks now)"}
 
 @app.post("/mempool/hits")
 def get_mempool_hits(server: MetadataServer = Depends(get_metadata_server)):
