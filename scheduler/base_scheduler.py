@@ -1,17 +1,17 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 from abc import ABC, abstractmethod
 
 from nodes.utils import MN2CNs, CPUCNs
 from common.utils import PORT, HostIP
 
 
-class CNBaseScheduler(ABC):
+class BaseScheduler(ABC):
     
     def __init__(
         self, 
         prefill_nodes: Dict[HostIP, MN2CNs],
         decode_nodes: Dict[HostIP, MN2CNs],
-        cpu_nodes: List[CPUCNs]
+        cpu_nodes: CPUCNs
     ) -> None:
         self.prefill_nodes = prefill_nodes
         self.decode_nodes = decode_nodes
@@ -19,12 +19,10 @@ class CNBaseScheduler(ABC):
 
     @abstractmethod
     def schedule_prefill(self) -> Tuple[HostIP, PORT]:
+        """Schedule a prefill cn"""
         raise NotImplementedError
 
     @abstractmethod
     def schedule_decode(self) -> Tuple[HostIP, PORT]:
-        raise NotImplementedError
-
-    @abstractmethod
-    def schedule_cpu(self) -> Tuple[HostIP, PORT]:
+        """Schedule a decode cn"""
         raise NotImplementedError

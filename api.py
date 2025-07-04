@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Depends
 
 from common.utils import *
-from metadata_server.metadata_server import MetadataServer
+from metadata_server import MetadataServer
 
 # Create FastAPI app
 app = FastAPI(title="Metadata Server API", description="API for managing compute nodes and memory pools")
@@ -45,16 +45,16 @@ def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_met
 ##############################################################
 #                      Get Nodes APIs                        #
 ##############################################################
-@app.get("/mempool/prefix_sharing")
-def prefix_sharing(request: GetMemNode, server: MetadataServer = Depends(get_metadata_server)):
-    """Choose a mem node for prefix sharing. CN may use pcie or rdma to fetch."""
-    ret = server.get_mn_for_prefix_sharing(request)
-    return {"data": ret}
-
 @app.get("/compnode/schedule_prefill")
 def schedule_prefill(request: GetCompNode, server: MetadataServer = Depends(get_metadata_server)):
     """Schudule a comp node for prefilling stage."""
     ret = server.schedule_prefill(request)
+    return {"data": ret}
+
+@app.get("/compnode/schedule_decode")
+def schedule_decode(request: GetCompNode, server: MetadataServer = Depends(get_metadata_server)):
+    """Schudule a comp node for prefilling stage."""
+    ret = server.schedule_decode(request)
     return {"data": ret}
 
 

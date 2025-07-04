@@ -1,5 +1,4 @@
-import hashlib
-from typing import List, Tuple
+from typing import List
 
 from common.utils import MemNodeCreate, MemNodeSync
 
@@ -26,6 +25,6 @@ class BlockPool:
     def get_free_blocks(self) -> int:
         return self.num_blocks - len(self.block_hashes)
 
-    def add_block_hashes(self, block_hashes: List[int]) -> None:
-        self.block_hashes.update(block_hashes)
+    def add_block_hashes(self, data: MemNodeSync) -> None:
+        self.block_hashes.update(data.block_hashes)
         assert len(self.block_hashes) <= self.num_blocks

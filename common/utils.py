@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -12,35 +12,31 @@ PORT = int
 class CompNodeCreate(BaseModel):
     host: HostIP
     port: PORT
-    role: str
+    role: str # prefill or decode or cpu
     num_gpu_blocks: int
 
 class MemNodeCreate(BaseModel):
     host: HostIP
-    node_type: str
+    node_type: str # Prefill or Decode
     num_blocks: int
 
 # Node get
 class GetCompNode(BaseModel):
     block_hashes: List[int]
-
-class GetMemNode(BaseModel):
-    block_hashes: List[int]
-
-class GetDisaggNodePair(BaseModel):
-    seq_length: int
+    # Used for schedule decode
+    direct_hybrid: Optional[bool] = None
 
 # Node sync
 class CompNodeSync(BaseModel):
     host: HostIP
     port: PORT
-    role: str
+    role: str # prefill or decode or cpu
     request_count: int
     gpu_blocks: List[int]
 
 class MemNodeSync(BaseModel):
     host: HostIP
-    port: PORT
+    node_type: str # Prefill or Decode
     block_hashes: List[int]
 
 
