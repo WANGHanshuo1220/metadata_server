@@ -17,6 +17,10 @@ class BaseScheduler(ABC):
         self.decode_nodes = decode_nodes
         self.cpu_nodes = cpu_nodes
 
+    @property
+    def name(self) -> str:
+        return "Base scheduler"
+
     @abstractmethod
     def schedule_prefill(self) -> Tuple[HostIP, PORT]:
         """Schedule a prefill cn"""

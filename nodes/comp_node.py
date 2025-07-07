@@ -20,8 +20,7 @@ class CNBaseInfo:
 class CompNode:
 
     def __init__(self, cn_info: CompNodeCreate, block_size: int) -> None:
-        self.gpu_pool = BlockPool(num_blocks=cn_info.num_gpu_blocks, 
-                                  block_size=block_size)
+        self.gpu_pool = BlockPool(cn_info, block_size)
         self.block_size = block_size
         self.base_info = CNBaseInfo.create(cn_info)
         

@@ -15,6 +15,10 @@ class NaiveScheduler(BaseScheduler):
         self.decode_nodes_counter = Counter()
 
         self.direct_hybrid_counter = Counter()
+
+    @property
+    def name(self) -> str:
+        return "Naive scheduler"
     
     def _schedule_prefill_host(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP]]:
         """Schedule a physical host for prefill based on prefix caching.

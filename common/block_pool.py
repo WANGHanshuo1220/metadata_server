@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Union
 
-from common.utils import MemNodeCreate, MemNodeSync
+from common.utils import MemNodeCreate, MemNodeSync, CompNodeCreate
 
 
 class BlockPool:
@@ -9,7 +9,7 @@ class BlockPool:
     2. GPU blocks of a compute engine
     """
 
-    def __init__(self, mn_info: MemNodeCreate, block_size: int):
+    def __init__(self, mn_info: Union[MemNodeCreate, CompNodeCreate], block_size: int):
         self.num_blocks = mn_info.num_blocks
         self.block_size = block_size
 

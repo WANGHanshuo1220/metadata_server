@@ -13,7 +13,7 @@ class CompNodeCreate(BaseModel):
     host: HostIP
     port: PORT
     role: str # prefill or decode or cpu
-    num_gpu_blocks: int
+    num_blocks: int
 
 class MemNodeCreate(BaseModel):
     host: HostIP

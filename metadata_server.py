@@ -21,6 +21,7 @@ class MetadataServer:
 
         self.scheduler = SchedulerFactory.create_scheduler(
             "Naive", self.prefill_nodes, self.decode_nodes, self.cpu_nodes)
+        print(f"Init {self.scheduler.name}")
 
 
     ##############################################################
@@ -79,8 +80,8 @@ class MetadataServer:
     
     @property
     def total_cn_count(self) -> Tuple[int, int, int]:
-        return (self.prefill_cn_count(), self.decode_cn_count(),
-                self.cpu_cn_count())
+        return (self.prefill_cn_count, self.decode_cn_count,
+                self.cpu_cn_count)
 
     @property
     def mn_count(self) -> int:

@@ -20,12 +20,14 @@ def get_metadata_server():
 @app.post("/compnode/add_node")
 def add_compnode(cn_info: CompNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new compute node to the server."""
+    print(f"Add a cn")
     server.add_cn(cn_info)
     return {"status": f"Add cn success ({server.total_cn_count} CNs now)"}
 
 @app.post("/mempool/add_node")
 def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_metadata_server)):
     """Add a new memory pool to the server."""
+    print(f"Add a mn {mn_info.node_type}")
     server.add_mn(mn_info)
     return {"status": f"Add mn success ({server.mn_count} MNs now)"}
 
@@ -33,15 +35,17 @@ def add_memnode(mn_info: MemNodeCreate, server: MetadataServer = Depends(get_met
 ##############################################################
 #                      Get Nodes APIs                        #
 ##############################################################
-@app.get("/compnode/schedule_prefill")
+@app.post("/compnode/schedule_prefill")
 def schedule_prefill(request: GetCompNode, server: MetadataServer = Depends(get_metadata_server)):
     """Schudule a comp node for prefilling stage."""
+    print(f"Schedule a prefill")
     ret = server.schedule_prefill(request)
     return {"data": ret}
 
-@app.get("/compnode/schedule_decode")
+@app.post("/compnode/schedule_decode")
 def schedule_decode(request: GetCompNode, server: MetadataServer = Depends(get_metadata_server)):
     """Schudule a comp node for prefilling stage."""
+    print(f"Schedule a decode")
     ret = server.schedule_decode(request)
     return {"data": ret}
 
@@ -83,6 +87,11 @@ def get_mempool_hits(server: MetadataServer = Depends(get_metadata_server)):
     """Get the number of hits for a list of blocks in a memory pool."""
     hit_rate = server.get_mempool_hit_rate()
     return {"ret": hit_rate}
+
+@app.get("/save_time_metrics")
+def save_time_metrics(server: MetadataServer = Depends(get_metadata_server)):
+    print(f"Save time metrics not imple yet")
+    return
 
 
 if __name__ == "__main__":
