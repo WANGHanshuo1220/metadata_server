@@ -87,10 +87,10 @@ class MetadataServer:
     def mn_count(self) -> int:
         return len(self.prefill_nodes) + len(self.decode_nodes)
 
-    def schedule_prefill(self, request: GetCompNode) -> Tuple[HostIP, PORT]:
+    def schedule_prefill(self, request: GetCompNode) -> Tuple:
         return self.scheduler.schedule_prefill(request)
 
-    def schedule_decode(self, request: GetCompNode) -> Tuple[HostIP, PORT]:
+    def schedule_decode(self, request: GetCompNode) -> Tuple:
         return self.scheduler.schedule_decode(request)
 
 
@@ -122,6 +122,7 @@ class MetadataServer:
     def sync_memnode(self, data: MemNodeSync) -> int:
         host = data.host
         node_type = data.node_type
+        print(f"Sync {node_type} with {len(data.block_hashes)} blocks")
 
         if node_type == "prefill":
             if host not in self.prefill_nodes.keys():

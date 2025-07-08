@@ -88,10 +88,10 @@ def get_mempool_hits(server: MetadataServer = Depends(get_metadata_server)):
     hit_rate = server.get_mempool_hit_rate()
     return {"ret": hit_rate}
 
-@app.get("/save_time_metrics")
-def save_time_metrics(server: MetadataServer = Depends(get_metadata_server)):
-    print(f"Save time metrics not imple yet")
-    return
+@app.post("/save_time_metrics")
+def save_time_metrics(engine_type: str, server: MetadataServer = Depends(get_metadata_server)):
+    print(f"Save {engine_type} time metrics not imple yet")
+    return {"status": f"Save {engine_type} success"}
 
 
 if __name__ == "__main__":

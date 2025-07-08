@@ -40,7 +40,7 @@ class CPUCNs:
         self.counter = Counter()
 
     def append(self, host, port, comp_node) -> None:
-        self.cpu_cns.append(CPUCNs(host, port, comp_node))
+        self.cpu_cns.append(CPUCN(host, port, comp_node))
 
     def schedule_rr(self) -> CPUCN:
         """Round robin schedule"""

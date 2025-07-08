@@ -1,7 +1,8 @@
 from typing import Tuple, Optional
 
 from scheduler.base_scheduler import BaseScheduler
-from common.utils import Counter, PORT, HostIP, GetCompNode
+from common.utils import (Counter, PORT, HostIP, GetCompNode, 
+                          SchedulePrefillOutput, ScheduleDecodeOutput)
 from nodes.utils import MN2CNs
 
 
@@ -52,12 +53,13 @@ class NaiveScheduler(BaseScheduler):
         return target_port
     
     def _make_direct_hybrid(self, request: GetCompNode) -> bool:
+        # return False
         if next(self.direct_hybrid_counter)%100 == 0:
             return True
         
         return False
 
-    def schedule_prefill(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP], PORT, bool]:
+    def schedule_prefill(self, request: GetCompNode) -> SchedulePrefillOutput:
         """ Schedule a prefill llm: only consider prefix caching, round robin otherwise.
         NOTE: node loads not considered
 
@@ -70,16 +72,16 @@ class NaiveScheduler(BaseScheduler):
         mn2cns = self.prefill_nodes[cn_host_ip]
         cn_port = self._schedule_prefill_cn(mn2cns)
         direct_hybrid_decode = self._make_direct_hybrid(request)
-        return (cn_host_ip, mn_host_ip, cn_port, direct_hybrid_decode)
+        return SchedulePrefillOutput(cn_host_ip, mn_host_ip, cn_port, direct_hybrid_decode)
 
-    def schedule_decode(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP], PORT]:
+    def schedule_decode(self, request: GetCompNode) -> ScheduleDecodeOutput:
         """ Schedule a docode llm """
         if request.direct_hybrid:
             return self._schedule_hybrid_decode(request)
         else:
             return self._schedule_gpu_decode(request)
 
-    def _schedule_gpu_decode(self, request: GetCompNode) -> Tuple[HostIP, HostIP, PORT]:
+    def _schedule_gpu_decode(self, request: GetCompNode) -> ScheduleDecodeOutput:
         """ Use round robin method to choose a mn and a cn.
         
         Return:
@@ -91,9 +93,9 @@ class NaiveScheduler(BaseScheduler):
         cn_host_ip = mn_host_ip
         cn_port = self.decode_nodes[mn_host_ip].schedule_cn_rr()
 
-        return (cn_host_ip, mn_host_ip, cn_port)
+        return ScheduleDecodeOutput(cn_host_ip, mn_host_ip, cn_port)
 
-    def _schedule_hybrid_decode(self, request: GetCompNode) -> Tuple[HostIP, Optional[HostIP], PORT]:
+    def _schedule_hybrid_decode(self, request: GetCompNode) -> ScheduleDecodeOutput:
         """ Use round robin method to choose a cn and save cache on local GPU host memory 
         NOTE: Let prefill llm save cache locally may lead to low aggregated network bandwidth
         and CPU computation
@@ -107,4 +109,4 @@ class NaiveScheduler(BaseScheduler):
         cn_host_ip = cpu_node.host_ip
         cn_port = cpu_node.port
         
-        return (cn_host_ip, mn_host_ip, cn_port)
+        return ScheduleDecodeOutput(cn_host_ip, mn_host_ip, cn_port)

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Optional
 from pydantic import BaseModel
 
@@ -38,6 +39,20 @@ class MemNodeSync(BaseModel):
     host: HostIP
     node_type: str # Prefill or Decode
     block_hashes: List[int]
+
+
+@dataclass
+class SchedulePrefillOutput:
+    cn_host_ip: HostIP
+    mn_host_ip: Optional[HostIP]
+    cn_port: int
+    direct_hybrid_decode: bool
+
+@dataclass
+class ScheduleDecodeOutput:
+    cn_host_ip: HostIP
+    mn_host_ip: Optional[HostIP]
+    cn_port: int
 
 
 class Counter:
